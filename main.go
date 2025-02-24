@@ -1,6 +1,7 @@
 package main
 
 import (
+	"1433/email-validator/util"
 	"net"
 	"net/http"
 	"os"
@@ -15,37 +16,60 @@ import (
 func main() {
 	r := chi.NewRouter()
 
+	go util.ConnectCache()
+
 	r.Use(middleware.Logger)
 	r.Use(render.SetContentType(render.ContentTypeJSON))
+
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		render.DefaultResponder(w, r, render.M{
+			"message":      "This service takes a very brief look to validate emails and makes sure they are valid.",
+			"route_to_hit": "/api/check?email=<email>",
+			"error_codes": map[int]string{
+				20000: "Email query string not given",
+				20001: "Invalid email format",
+				20002: "Email must be from 8 to 254 characters",
+				20003: "Invalid domain tld",
+				20010: "disposable email address (query string: check_disposable=1 to check for such)",
+				20011: "Email domain does not exist or has no mail servers",
+			},
+		})
+	})
+
 	r.Get("/api/check", func(w http.ResponseWriter, r *http.Request) {
 		email := strings.TrimSpace(r.URL.Query().Get("email"))
 		checkDisposable := strings.TrimSpace(r.URL.Query().Get("check_disposable"))
 
 		if email == "" {
-			render.DefaultResponder(w, r, render.M{"valid": false, "code": 20000, "error": "email query string not given"})
+			render.DefaultResponder(w, r, render.M{"valid": false, "code": 20000, "message": "Email query string not given"})
 			return
 		}
 
 		parts := strings.Split(email, "@")
 		if len(parts) != 2 {
-			render.DefaultResponder(w, r, render.M{"valid": false, "code": 20001, "error": "invalid email format"})
+			render.DefaultResponder(w, r, render.M{"valid": false, "code": 20001, "message": "Invalid email format"})
 			return
 		}
 
 		if len(email) < 8 || len(email) > 254 {
-			render.DefaultResponder(w, r, render.M{"valid": false, "code": 20002, "error": "email must be from 8 to 254 characters"})
+			render.DefaultResponder(w, r, render.M{"valid": false, "code": 20002, "message": "Email must be from 8 to 254 characters"})
 			return
 		}
 
 		re := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
 		if !re.MatchString(email) {
-			render.DefaultResponder(w, r, render.M{"valid": false, "code": 20001, "error": "invalid email format"})
+			render.DefaultResponder(w, r, render.M{"valid": false, "code": 20001, "message": "Invalid email format"})
+			return
+		}
+
+		if valid := util.IsValidDomain(parts[1]); !valid {
+			render.DefaultResponder(w, r, render.M{"valid": false, "code": 20003, "message": "Invalid domain tld"})
 			return
 		}
 
 		mxRecords, err := net.LookupMX(parts[1])
 		if err != nil || len(mxRecords) == 0 {
-			render.DefaultResponder(w, r, render.M{"valid": false, "code": 21000, "message": "email domain does not exist or has no mail servers"})
+			render.DefaultResponder(w, r, render.M{"valid": false, "code": 20011, "message": "Email domain does not exist or has no mail servers"})
 			return
 		}
 
@@ -69,7 +93,7 @@ func main() {
 
 			for _, d := range disposableDomains {
 				if strings.HasSuffix(parts[1], d) {
-					render.DefaultResponder(w, r, render.M{"valid": false, "code": 20010, "error": "disposable email address"})
+					render.DefaultResponder(w, r, render.M{"valid": false, "code": 20010, "message": "disposable email address"})
 					return
 				}
 			}
