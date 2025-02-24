@@ -83,4 +83,6 @@ func main() {
 	if _, err := os.Stat("/.dockerenv"); err == nil {
 		port = ":3000"
 	}
+
+	http.ListenAndServe(port, r)
 }
