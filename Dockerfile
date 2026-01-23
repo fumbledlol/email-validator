@@ -9,7 +9,7 @@ COPY . .
 
 ENV GOCACHE=/root/.cache/go-build
 
-RUN --mount=type=cache,target="/root/.cache/go-build" CGO_ENABLED=0 GOOS=linux go build -v -x -o /goapp
+RUN CGO_ENABLED=0 GOOS=linux go build -v -x -o /goapp
 
 FROM alpine:latest
 
