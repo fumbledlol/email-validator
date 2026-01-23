@@ -102,11 +102,17 @@ func main() {
 		render.DefaultResponder(w, r, render.M{"valid": true, "email": email})
 	})
 
-	port := "127.0.0.1:3002"
-
-	if _, err := os.Stat("/.dockerenv"); err == nil {
-		port = ":3000"
+	host := "127.0.0.1"
+	port := "3002"
+	
+	if envPort := os.Getenv("PORT"); envPort != "" {
+	    port = envPort
+	    host = "0.0.0.0" 
 	}
-
-	http.ListenAndServe(port, r)
+	
+	address := host + ":" + port
+	
+	if err := http.ListenAndServe(address, nil); err != nil {
+	    log.Fatal(err)
+	}
 }
