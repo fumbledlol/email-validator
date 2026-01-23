@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/dgraph-io/ristretto"
+	"github.com/dgraph-io/ristretto/v2"
 	"github.com/eko/gocache/lib/v4/cache"
 	"github.com/eko/gocache/lib/v4/store"
 	redis_store "github.com/eko/gocache/store/redis/v4"
@@ -28,7 +28,7 @@ func ConnectCache() {
 		Cache = cache.New[string](redis_store.NewRedis(redisClient, store.WithExpiration(5*time.Minute)))
 		slog.Info("[CACHE] Connected using Redis")
 	} else {
-		ristrettoCache, err := ristretto.NewCache(&ristretto.Config{
+		ristrettoCache, err := ristretto.NewCache(&ristretto.Config[string, any]{
 			NumCounters: 1000,
 			MaxCost:     100000000,
 			BufferItems: 64,
@@ -36,6 +36,7 @@ func ConnectCache() {
 		if err != nil {
 			panic(err)
 		}
+
 		Cache = cache.New[string](ristretto_store.NewRistretto(ristrettoCache))
 
 		slog.Info("[CACHE] Connected using Ristretto. Do not use in production!!")
