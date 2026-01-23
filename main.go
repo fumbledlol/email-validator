@@ -2,6 +2,7 @@ package main
 
 import (
 	"1433/email-validator/util"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -9,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/render"
 )
 
@@ -18,7 +18,6 @@ func main() {
 
 	go util.ConnectCache()
 
-	r.Use(middleware.Logger)
 	r.Use(render.SetContentType(render.ContentTypeJSON))
 
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
@@ -104,15 +103,15 @@ func main() {
 
 	host := "127.0.0.1"
 	port := "3002"
-	
+
 	if envPort := os.Getenv("PORT"); envPort != "" {
-	    port = envPort
-	    host = "0.0.0.0" 
+		port = envPort
+		host = "0.0.0.0"
 	}
-	
+
 	address := host + ":" + port
-	
-	if err := http.ListenAndServe(address, nil); err != nil {
-	    log.Fatal(err)
+
+	if err := http.ListenAndServe(address, r); err != nil {
+		log.Fatal(err)
 	}
 }
